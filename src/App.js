@@ -45,6 +45,12 @@ function App() {
     });
   };
 
+  const handleDeleteTagRelation = (parentTag, childTag) => {
+    setTagRelationships(prev => 
+      prev.filter(rel => !(rel.parent === parentTag && rel.child === childTag))
+    );
+  };
+
   return (
     <div className="App">
       <Container fluid>
@@ -66,6 +72,7 @@ function App() {
             <GrafosMy 
               images={images}
               tagRelationships={tagRelationships}
+              onDeleteTagRelation={handleDeleteTagRelation}
               onDeleteImage={handleDeleteImage}
               onDeleteTag={handleDeleteTag}
             />

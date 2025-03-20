@@ -4,13 +4,14 @@ import { DataSet } from 'vis-data';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import {Button, Modal } from 'react-bootstrap';
 
-const GrafosMy = ({ images, tagRelationships, onDeleteImage, onDeleteTag }) => {
+const GrafosMy = ({ images, tagRelationships, onDeleteTagRelation, onDeleteImage, onDeleteTag }) => {
   const containerRef = useRef(null);
   const networkRef = useRef(null);
   const nodesRef = useRef(new DataSet([]));
   const edgesRef = useRef(new DataSet([]));
   const [selectedImage, setSelectedImage] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [selectedEdge, setSelectedEdge] = useState(null);
 
   useEffect(() => {
     // Create nodes for images
@@ -30,11 +31,13 @@ const GrafosMy = ({ images, tagRelationships, onDeleteImage, onDeleteTag }) => {
     const tagNodes = [];
     const edges = [];
     const tagCount = {};
+    const tagConnections = {}; // Track connections for each tag
 
     // Count how many images have each tag
     images.forEach(image => {
       image.tags.forEach(tag => {
         tagCount[tag] = (tagCount[tag] || 0) + 1;
+        tagConnections[tag] = 0; // Initialize connection count
       });
     });
 
@@ -67,12 +70,13 @@ const GrafosMy = ({ images, tagRelationships, onDeleteImage, onDeleteTag }) => {
               title: `Tagged as ${tag}`,
               color: '#0288d1',
             });
+            tagConnections[tag]++; // Increment connection count
           }
         });
       }
     });
 
-    // Add edges for tag relationships
+    // Add edges for tag relationships and count these connections too
     if (tagRelationships) {
       tagRelationships.forEach(rel => {
         if (nodesRef.current.get(`tag_${rel.parent}`) && nodesRef.current.get(`tag_${rel.child}`)) {
@@ -84,11 +88,19 @@ const GrafosMy = ({ images, tagRelationships, onDeleteImage, onDeleteTag }) => {
             width: 2,
             title: `${rel.parent} → ${rel.child}`
           });
+          tagConnections[rel.parent]++;
+          tagConnections[rel.child]++;
         }
       });
     }
 
-    nodesRef.current = new DataSet([...imageNodes, ...tagNodes]);
+    // Filter out tag nodes that have no connections
+    const connectedTagNodes = tagNodes.filter(node => {
+      const tag = node.id.replace('tag_', '');
+      return tagConnections[tag] > 0;
+    });
+
+    nodesRef.current = new DataSet([...imageNodes, ...connectedTagNodes]);
     edgesRef.current = new DataSet(edges);
 
     const data = {
@@ -143,9 +155,14 @@ const GrafosMy = ({ images, tagRelationships, onDeleteImage, onDeleteTag }) => {
 
     networkRef.current = new Network(containerRef.current, data, options);
 
-    // Add click event handler
+    // Update the click handler to handle edge selection
     networkRef.current.on('click', function(params) {
-      if (params.nodes.length > 0) {
+      if (params.edges.length > 0) {
+        const edgeId = params.edges[0];
+        const edge = edgesRef.current.get(edgeId);
+        setSelectedEdge(edge);
+      } else if (params.nodes.length > 0) {
+        // Existing node click handler
         const nodeId = params.nodes[0];
         if (nodeId.startsWith('image_')) {
           const imageId = parseInt(nodeId.split('_')[1]);
@@ -155,6 +172,9 @@ const GrafosMy = ({ images, tagRelationships, onDeleteImage, onDeleteTag }) => {
             setShowPreview(true);
           }
         }
+        setSelectedEdge(null); // Clear selected edge when clicking a node
+      } else {
+        setSelectedEdge(null); // Clear selected edge when clicking background
       }
     });
 
@@ -186,6 +206,59 @@ const GrafosMy = ({ images, tagRelationships, onDeleteImage, onDeleteTag }) => {
     });
   };
 
+  const handleDeleteEdge = () => {
+    if (selectedEdge) {
+      // Remove the edge
+      edgesRef.current.remove(selectedEdge.id);
+
+      // Check if either node is now isolated
+      const fromNode = selectedEdge.from;
+      const toNode = selectedEdge.to;
+
+      // Only check tag nodes (not image nodes)
+      if (fromNode.startsWith('tag_')) {
+        const remainingEdges = edgesRef.current.get({
+          filter: edge => edge.from === fromNode || edge.to === fromNode
+        });
+        if (remainingEdges.length === 0) {
+          const tagToRemove = fromNode.replace('tag_', '');
+          nodesRef.current.remove(fromNode);
+          
+          images.forEach(image => {
+            if (image.tags.includes(tagToRemove)) {
+              onDeleteTag(image.id, tagToRemove);
+            }
+          });
+        }
+      }
+
+      if (toNode.startsWith('tag_')) {
+        const remainingEdges = edgesRef.current.get({
+          filter: edge => edge.from === toNode || edge.to === toNode
+        });
+        if (remainingEdges.length === 0) {
+          const tagToRemove = toNode.replace('tag_', '');
+          nodesRef.current.remove(toNode);
+          
+          images.forEach(image => {
+            if (image.tags.includes(tagToRemove)) {
+              onDeleteTag(image.id, tagToRemove);
+            }
+          });
+        }
+      }
+
+      // Update tag relationships if it was a tag relationship edge
+      if (selectedEdge.arrows) {
+        const parentTag = selectedEdge.from.replace('tag_', '');
+        const childTag = selectedEdge.to.replace('tag_', '');
+        onDeleteTagRelation(parentTag, childTag);
+      }
+
+      setSelectedEdge(null);
+    }
+  };
+
   return (
     <div id="app">
       <div style={{ 
@@ -193,8 +266,29 @@ const GrafosMy = ({ images, tagRelationships, onDeleteImage, onDeleteTag }) => {
         background: '#f8f9fa',
         borderBottom: '1px solid #e9ecef',
         display: 'flex',
-        justifyContent: 'flex-end'
+        justifyContent: 'space-between',
+        alignItems: 'center'
       }}>
+        <div>
+          {selectedEdge && (
+            <Button 
+              className="btn btn-danger"
+              onClick={handleDeleteEdge}
+              style={{
+                border: 'none',
+                padding: '8px 20px',
+                borderRadius: '6px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                transition: 'all 0.2s ease-in-out'
+              }}
+              onMouseOver={(e) => e.target.style.transform = 'translateY(-1px)'}
+              onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+            >
+              Delete Connection
+            </Button>
+          )}
+        </div>
+
         <Button 
           className="btn btn-primary" 
           onClick={centerNetwork}
