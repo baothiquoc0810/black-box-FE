@@ -4,7 +4,7 @@ import { DataSet } from 'vis-data';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import {Button, Modal } from 'react-bootstrap';
 
-const GrafosMy = ({ images, onDeleteImage, onDeleteTag }) => {
+const GrafosMy = ({ images, tagRelationships, onDeleteImage, onDeleteTag }) => {
   const containerRef = useRef(null);
   const networkRef = useRef(null);
   const nodesRef = useRef(new DataSet([]));
@@ -71,6 +71,22 @@ const GrafosMy = ({ images, onDeleteImage, onDeleteTag }) => {
         });
       }
     });
+
+    // Add edges for tag relationships
+    if (tagRelationships) {
+      tagRelationships.forEach(rel => {
+        if (nodesRef.current.get(`tag_${rel.parent}`) && nodesRef.current.get(`tag_${rel.child}`)) {
+          edges.push({
+            from: `tag_${rel.parent}`,
+            to: `tag_${rel.child}`,
+            arrows: 'to',
+            dashes: true,
+            width: 2,
+            title: `${rel.parent} → ${rel.child}`
+          });
+        }
+      });
+    }
 
     nodesRef.current = new DataSet([...imageNodes, ...tagNodes]);
     edgesRef.current = new DataSet(edges);
@@ -159,7 +175,7 @@ const GrafosMy = ({ images, onDeleteImage, onDeleteTag }) => {
         networkRef.current.destroy();
       }
     };
-  }, [images, onDeleteImage, onDeleteTag]);
+  }, [images, tagRelationships, onDeleteImage, onDeleteTag]);
 
   const centerNetwork = () => {
     networkRef.current.fit({

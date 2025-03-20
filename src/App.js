@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import ImageGrid from "./components/ImageGrid.js";
 import GrafosMy from "./components/GrafosMy.js";
+import TagRelationships from "./components/TagRelationships.js";
 import { Container, Row, Col, Tabs, Tab } from 'react-bootstrap';
 
 function App() {
   const [images, setImages] = useState([]);
+  const [tagRelationships, setTagRelationships] = useState([]);
 
   const handleImageUpload = (newImage) => {
     setImages(prev => [...prev, newImage]);
@@ -30,6 +32,19 @@ function App() {
     ));
   };
 
+  const handleAddTagRelation = (parentTag, childTag) => {
+    setTagRelationships(prev => {
+      // Check if relationship already exists
+      const exists = prev.some(
+        rel => rel.parent === parentTag && rel.child === childTag
+      );
+      if (!exists) {
+        return [...prev, { parent: parentTag, child: childTag }];
+      }
+      return prev;
+    });
+  };
+
   return (
     <div className="App">
       <Container fluid>
@@ -44,8 +59,13 @@ function App() {
             />
           </Tab>
           <Tab eventKey="network" title="Network View">
+            <TagRelationships 
+              images={images} 
+              onAddTagRelation={handleAddTagRelation}
+            />
             <GrafosMy 
               images={images}
+              tagRelationships={tagRelationships}
               onDeleteImage={handleDeleteImage}
               onDeleteTag={handleDeleteTag}
             />
