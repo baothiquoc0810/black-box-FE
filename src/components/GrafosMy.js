@@ -142,25 +142,6 @@ const GrafosMy = ({ images, onDeleteImage, onDeleteTag }) => {
       }
     });
 
-    // Add right-click (context) menu for nodes
-    networkRef.current.on('hold', function(params) {
-      if (params.nodes.length > 0) {
-        const nodeId = params.nodes[0];
-        if (nodeId.startsWith('image_')) {
-          const imageId = parseInt(nodeId.split('_')[1]);
-          onDeleteImage(imageId);
-        } else if (nodeId.startsWith('tag_')) {
-          const tag = nodeId.split('_')[1];
-          // Find all images with this tag and remove it
-          images.forEach(image => {
-            if (image.tags.includes(tag)) {
-              onDeleteTag(image.id, tag);
-            }
-          });
-        }
-      }
-    });
-
     // Center the network after it's stabilized
     networkRef.current.on('stabilizationProgress', function(params) {
       if (params.iterations === params.total) {
