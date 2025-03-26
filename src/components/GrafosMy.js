@@ -155,26 +155,34 @@ const GrafosMy = ({ images, tagRelationships, onDeleteTagRelation, onDeleteImage
 
     networkRef.current = new Network(containerRef.current, data, options);
 
-    // Update the click handler to handle edge selection
+    // Updated click handler to prioritize image preview
     networkRef.current.on('click', function(params) {
-      if (params.edges.length > 0) {
-        const edgeId = params.edges[0];
-        const edge = edgesRef.current.get(edgeId);
-        setSelectedEdge(edge);
-      } else if (params.nodes.length > 0) {
-        // Existing node click handler
+      // First check if we clicked a node
+      if (params.nodes.length > 0) {
         const nodeId = params.nodes[0];
         if (nodeId.startsWith('image_')) {
+          // If it's an image node, always show preview and don't select edge
           const imageId = parseInt(nodeId.split('_')[1]);
           const image = images.find(img => img.id === imageId);
           if (image) {
             setSelectedImage(image);
             setShowPreview(true);
+            setSelectedEdge(null); // Clear any selected edge
           }
+          return; // Exit early to prevent edge selection
         }
-        setSelectedEdge(null); // Clear selected edge when clicking a node
+      }
+
+      // If we didn't click an image node, handle edge selection
+      if (params.edges.length > 0) {
+        const edgeId = params.edges[0];
+        const edge = edgesRef.current.get(edgeId);
+        setSelectedEdge(edge);
+        setShowPreview(false); // Close any open preview
       } else {
-        setSelectedEdge(null); // Clear selected edge when clicking background
+        // Clicked empty space or non-image node
+        setSelectedEdge(null);
+        setShowPreview(false);
       }
     });
 
