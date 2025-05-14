@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import ImageGrid from "./components/ImageGrid.js";
-import GrafosMy from "./components/GrafosMy.js";
+import GrafosMy from "./components/GrafosMy/index.js";
 import TagRelationships from "./components/TagRelationships.js";
 import { Container, Row, Col, Tabs, Tab } from 'react-bootstrap';
 
