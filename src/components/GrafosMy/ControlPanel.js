@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from 'react-bootstrap';
 
-const ControlPanel = ({ selectedEdge, onDeleteEdge, onCenterNetwork }) => {
+const ControlPanel = ({ selectedEdges, onDeleteEdges, onCenterNetwork }) => {
   return (
     <div style={{ 
       padding: '15px',
@@ -12,10 +12,10 @@ const ControlPanel = ({ selectedEdge, onDeleteEdge, onCenterNetwork }) => {
       alignItems: 'center'
     }}>
       <div>
-        {selectedEdge && (
+        {selectedEdges && (
           <Button 
             className="btn btn-danger"
-            onClick={onDeleteEdge}
+            onClick={onDeleteEdges}
             style={{
               border: 'none',
               padding: '8px 20px',
