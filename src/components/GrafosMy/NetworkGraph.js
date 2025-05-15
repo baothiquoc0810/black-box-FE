@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { Network } from 'vis-network';
 import { DataSet } from 'vis-data';
 import { createNetworkData, createNetworkOptions } from '../../utils/networkHelpers';
@@ -12,8 +12,43 @@ const NetworkGraph = ({
   tagRelationships,
   setSelectedImage,
   setShowPreview,
-  setSelectedEdge
+  setSelectedEdges
 }) => {
+  const handleNetworkClick = useCallback((params) => {
+    if (params.nodes.length > 0) {
+      const nodeId = params.nodes[0];
+      if (nodeId.startsWith('image_')) {
+        const imageId = parseInt(nodeId.split('_')[1]);
+        const image = images.find(img => img.id === imageId);
+        if (image) {
+          setSelectedImage(image);
+          setShowPreview(true);
+          setSelectedEdges(null);
+        }
+        return;
+      }
+    }
+
+    if (params.edges.length > 0) {
+      setSelectedEdges(params.edges);
+      setShowPreview(false);
+    } else {
+      setSelectedEdges(null);
+      setShowPreview(false);
+    }
+  }, [images, setSelectedImage, setShowPreview, setSelectedEdges]);
+
+  const handleStabilization = useCallback((params) => {
+    if (params.iterations === params.total) {
+      networkRef.current.fit({
+        animation: {
+          duration: 1000,
+          easingFunction: 'easeInOutQuad'
+        }
+      });
+    }
+  }, [networkRef]);
+
   useEffect(() => {
     const { nodes, edges } = createNetworkData(images, tagRelationships);
     nodesRef.current = new DataSet(nodes);
@@ -27,7 +62,6 @@ const NetworkGraph = ({
     const options = createNetworkOptions();
     networkRef.current = new Network(containerRef.current, data, options);
 
-    // Event handlers
     networkRef.current.on('click', handleNetworkClick);
     networkRef.current.on('stabilizationProgress', handleStabilization);
 
@@ -36,44 +70,7 @@ const NetworkGraph = ({
         networkRef.current.destroy();
       }
     };
-  }, [images, tagRelationships]);
-
-  const handleNetworkClick = (params) => {
-    if (params.nodes.length > 0) {
-      const nodeId = params.nodes[0];
-      if (nodeId.startsWith('image_')) {
-        const imageId = parseInt(nodeId.split('_')[1]);
-        const image = images.find(img => img.id === imageId);
-        if (image) {
-          setSelectedImage(image);
-          setShowPreview(true);
-          setSelectedEdge(null);
-        }
-        return;
-      }
-    }
-
-    if (params.edges.length > 0) {
-      const edgeId = params.edges[0];
-      const edge = edgesRef.current.get(edgeId);
-      setSelectedEdge(edge);
-      setShowPreview(false);
-    } else {
-      setSelectedEdge(null);
-      setShowPreview(false);
-    }
-  };
-
-  const handleStabilization = (params) => {
-    if (params.iterations === params.total) {
-      networkRef.current.fit({
-        animation: {
-          duration: 1000,
-          easingFunction: 'easeInOutQuad'
-        }
-      });
-    }
-  };
+  }, [images, tagRelationships, containerRef, edgesRef, handleNetworkClick, handleStabilization, networkRef, nodesRef]);
 
   return (
     <div 

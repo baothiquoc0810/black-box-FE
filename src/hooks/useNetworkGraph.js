@@ -1,5 +1,6 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { DataSet } from 'vis-data';
+import { createNetworkData } from '../utils/networkHelpers';
 
 const useNetworkGraph = ({
   images,
@@ -9,30 +10,51 @@ const useNetworkGraph = ({
   onDeleteTag,
   setSelectedImage,
   setShowPreview,
-  setSelectedEdge
+  setSelectedEdges
 }) => {
   const containerRef = useRef(null);
   const networkRef = useRef(null);
   const nodesRef = useRef(new DataSet([]));
   const edgesRef = useRef(new DataSet([]));
 
-  const handleDeleteEdge = (selectedEdge) => {
-    if (selectedEdge) {
-      // Remove the edge
-      edgesRef.current.remove(selectedEdge.id);
+  useEffect(() => {
+    const { nodes, edges } = createNetworkData(images, tagRelationships);
 
-      // Check if either node is now isolated
-      const fromNode = selectedEdge.from;
-      const toNode = selectedEdge.to;
+    // Cập nhật nodes và edges
+    nodesRef.current.clear();
+    nodesRef.current.add(nodes);
 
-      // Only check tag nodes (not image nodes)
-      if (fromNode.startsWith('tag_')) {
+    edgesRef.current.clear();
+    edgesRef.current.add(edges);
+
+  }, [images, tagRelationships]);
+
+  const handleDeleteEdges = (selectedEdgeIds) => {
+    if (!selectedEdgeIds || selectedEdgeIds.length === 0) return;
+
+    // Lấy thông tin đầy đủ của các edge từ edgesRef
+    const edgesToDelete = selectedEdgeIds.map(edgeId => edgesRef.current.get(edgeId)).filter(Boolean);
+    
+    // Xóa tất cả các edge
+    edgesRef.current.remove(selectedEdgeIds);
+
+    // Xử lý các node bị cô lập sau khi xóa edges
+    const affectedNodes = new Set();
+    edgesToDelete.forEach(edge => {
+      affectedNodes.add(edge.from);
+      affectedNodes.add(edge.to);
+    });
+
+    // Kiểm tra các tag nodes bị cô lập
+    affectedNodes.forEach(nodeId => {
+      if (nodeId.startsWith('tag_')) {
         const remainingEdges = edgesRef.current.get({
-          filter: edge => edge.from === fromNode || edge.to === fromNode
+          filter: edge => edge.from === nodeId || edge.to === nodeId
         });
+
         if (remainingEdges.length === 0) {
-          const tagToRemove = fromNode.replace('tag_', '');
-          nodesRef.current.remove(fromNode);
+          const tagToRemove = nodeId.replace('tag_', '');
+          nodesRef.current.remove(nodeId);
           
           images.forEach(image => {
             if (image.tags.includes(tagToRemove)) {
@@ -41,34 +63,22 @@ const useNetworkGraph = ({
           });
         }
       }
+    });
 
-      if (toNode.startsWith('tag_')) {
-        const remainingEdges = edgesRef.current.get({
-          filter: edge => edge.from === toNode || edge.to === toNode
-        });
-        if (remainingEdges.length === 0) {
-          const tagToRemove = toNode.replace('tag_', '');
-          nodesRef.current.remove(toNode);
-          
-          images.forEach(image => {
-            if (image.tags.includes(tagToRemove)) {
-              onDeleteTag(image.id, tagToRemove);
-            }
-          });
-        }
-      }
-
-      // Update tag relationships if it was a tag relationship edge
-      if (selectedEdge.arrows) {
-        const parentTag = selectedEdge.from.replace('tag_', '');
-        const childTag = selectedEdge.to.replace('tag_', '');
+    // Xử lý tag relationships
+    edgesToDelete.forEach(edge => {
+      if (edge.arrows === 'to' || (edge.arrows && edge.arrows.to)) {
+        const parentTag = edge.from.replace('tag_', '');
+        const childTag = edge.to.replace('tag_', '');
         onDeleteTagRelation(parentTag, childTag);
       }
+    });
 
-      // Handle tag-to-image edge deletion
-      if (!selectedEdge.arrows) {  // If it's not a tag relationship edge (no arrows)
-        const tagNode = selectedEdge.from.startsWith('tag_') ? selectedEdge.from : selectedEdge.to;
-        const imageNode = selectedEdge.from.startsWith('image_') ? selectedEdge.from : selectedEdge.to;
+    // Xử lý tag-to-image relationships
+    edgesToDelete.forEach(edge => {
+      if (edge.arrows === '' || (edge.arrows && !edge.arrows.to)) {
+        const tagNode = edge.from.startsWith('tag_') ? edge.from : edge.to;
+        const imageNode = edge.from.startsWith('image_') ? edge.from : edge.to;
         
         if (tagNode && imageNode) {
           const tagName = tagNode.replace('tag_', '');
@@ -76,9 +86,9 @@ const useNetworkGraph = ({
           onDeleteTag(imageId, tagName);
         }
       }
+    });
 
-      setSelectedEdge(null);
-    }
+    setSelectedEdges(null);
   };
 
   const centerNetwork = () => {
@@ -95,7 +105,7 @@ const useNetworkGraph = ({
     networkRef,
     nodesRef,
     edgesRef,
-    handleDeleteEdge,
+    handleDeleteEdges,
     centerNetwork
   };
 };

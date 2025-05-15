@@ -8,14 +8,14 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 const GrafosMy = ({ images, tagRelationships, onDeleteTagRelation, onDeleteImage, onDeleteTag }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
-  const [selectedEdge, setSelectedEdge] = useState(null);
+  const [selectedEdges, setSelectedEdges] = useState([]);
 
   const {
     containerRef,
     networkRef,
     nodesRef,
     edgesRef,
-    handleDeleteEdge,
+    handleDeleteEdges,
     centerNetwork
   } = useNetworkGraph({
     images,
@@ -25,18 +25,18 @@ const GrafosMy = ({ images, tagRelationships, onDeleteTagRelation, onDeleteImage
     onDeleteTag,
     setSelectedImage,
     setShowPreview,
-    setSelectedEdge
+    setSelectedEdges
   });
 
-  const handleDeleteEdgeClick = () => {
-    handleDeleteEdge(selectedEdge);
+  const handleDeleteEdgesClick = () => {
+    handleDeleteEdges(selectedEdges);
   };
 
   return (
     <div id="app">
       <ControlPanel 
-        selectedEdge={selectedEdge}
-        onDeleteEdge={handleDeleteEdgeClick}
+        selectedEdges={selectedEdges}
+        onDeleteEdges={handleDeleteEdgesClick}
         onCenterNetwork={centerNetwork}
       />
       
@@ -49,7 +49,7 @@ const GrafosMy = ({ images, tagRelationships, onDeleteTagRelation, onDeleteImage
         tagRelationships={tagRelationships}
         setSelectedImage={setSelectedImage}
         setShowPreview={setShowPreview}
-        setSelectedEdge={setSelectedEdge}
+        setSelectedEdges={setSelectedEdges}
       />
 
       <ImagePreviewModal 
