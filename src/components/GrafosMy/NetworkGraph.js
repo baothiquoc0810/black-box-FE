@@ -78,10 +78,11 @@ const NetworkGraph = ({
       id="mynetwork" 
       style={{ 
         width: '100%', 
-        height: 'calc(90vh - 80px)',
+        height: 'calc(90vh - 135px)',
         border: '1px solid #e9ecef',
         background: '#ffffff',
-        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)'
+        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)',
+        borderRadius: '0px 0px 5px 5px'
       }} 
     />
   );
