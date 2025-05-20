@@ -13,7 +13,7 @@ const ControlPanel = ({ selectedEdges, onDeleteEdges, onCenterNetwork }) => {
       borderRadius: '5px 5px 0px 0px'
     }}>
       <div>
-        {selectedEdges && (
+        {selectedEdges?.length > 0 && (
           <Button 
             className="btn btn-danger"
             onClick={onDeleteEdges}
