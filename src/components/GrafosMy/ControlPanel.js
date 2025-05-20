@@ -9,7 +9,8 @@ const ControlPanel = ({ selectedEdges, onDeleteEdges, onCenterNetwork }) => {
       borderBottom: '1px solid #e9ecef',
       display: 'flex',
       justifyContent: 'space-between',
-      alignItems: 'center'
+      alignItems: 'center',
+      borderRadius: '5px 5px 0px 0px'
     }}>
       <div>
         {selectedEdges && (

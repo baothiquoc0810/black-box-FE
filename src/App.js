@@ -65,6 +65,7 @@ function App() {
             />
           </Tab>
           <Tab eventKey="network" title="Network View">
+            <div className="d-flex" style={{ height: 'calc(100vh - 120px)'}}>
             <TagRelationships 
               images={images} 
               onAddTagRelation={handleAddTagRelation}
@@ -76,6 +77,7 @@ function App() {
               onDeleteImage={handleDeleteImage}
               onDeleteTag={handleDeleteTag}
             />
+            </div>
           </Tab>
         </Tabs>
       </Container>

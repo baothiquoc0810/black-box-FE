@@ -33,7 +33,7 @@ const GrafosMy = ({ images, tagRelationships, onDeleteTagRelation, onDeleteImage
   };
 
   return (
-    <div id="app">
+    <div id="app" style={{flex: 1}}>
       <ControlPanel 
         selectedEdges={selectedEdges}
         onDeleteEdges={handleDeleteEdgesClick}

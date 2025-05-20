@@ -25,12 +25,12 @@ const TagRelationships = ({ images, onAddTagRelation }) => {
   };
 
   return (
-    <div className="mb-4 p-3 border rounded bg-light">
-      <h5>Link Tags</h5>
+    <div className="mb-4 p-3 border rounded bg-light" style={{ width: '20%', marginRight: '20px' }}>
+      <h5 style={{borderBottom: '1px solid #e9ecef', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>Link Tags</h5>
       <Form onSubmit={handleSubmit}>
-        <div className="d-flex gap-3 align-items-end">
-          <Form.Group className="mb-0 flex-grow-1">
-            <Form.Label>Parent Tag</Form.Label>
+        <div className="d-flex gap-3 align-items-center flex-column">
+          <Form.Group className="mb-0 flex-grow-1 w-100">
+            <Form.Label className='d-flex align-self-start'>Parent Tag</Form.Label>
             <Form.Select
               value={selectedParentTag}
               onChange={(e) => setSelectedParentTag(e.target.value)}
@@ -41,8 +41,8 @@ const TagRelationships = ({ images, onAddTagRelation }) => {
               ))}
             </Form.Select>
           </Form.Group>
-          <Form.Group className="mb-0 flex-grow-1">
-            <Form.Label>Child Tag</Form.Label>
+          <Form.Group className="mb-0 flex-grow-1 w-100">
+            <Form.Label className='d-flex align-self-start'>Child Tag</Form.Label>
             <Form.Select
               value={selectedChildTag}
               onChange={(e) => setSelectedChildTag(e.target.value)}
