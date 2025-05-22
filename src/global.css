@@ -71,3 +71,46 @@
   .btn-danger {
     background-color: #dc3545;
   }
+  .dropdown-menu {
+    min-width: 200px;
+    padding: 0.5rem 0;
+    margin: 0.5rem 0 0;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 0.5rem;
+  }
+  
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+    color: #333;
+  }
+  
+  .dropdown-item:hover {
+    background-color: #f8f9fa;
+  }
+  
+  .dropdown-item i {
+    width: 1.25rem;
+    text-align: center;
+  }
+  
+  .dropdown-divider {
+    margin: 0.5rem 0;
+  }
+  
+  #dropdown-profile {
+    background: none;
+    border: none;
+    color: #333;
+    font-weight: 500;
+  }
+  
+  #dropdown-profile:hover,
+  #dropdown-profile:focus {
+    background-color: #f8f9fa;
+    color: #333;
+  }
+  
+  #dropdown-profile::after {
+    margin-left: 0.5rem;
+  }
