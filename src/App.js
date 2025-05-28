@@ -15,15 +15,26 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [showLogin, setShowLogin] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
+  const [isUserLoading, setIsUserLoading] = useState(true);
 
   useEffect(() => {
-    setIsLoading(true);
-    const user = AuthService.getCurrentUser();
-    if (user){
-      setCurrentUser(user);
-      setIsAuthenticated(true);
-    }
-    setIsLoading(false);
+    const loadUser = async () => {
+      setIsUserLoading(true);
+      try {
+        const user = AuthService.getCurrentUser();
+        if (user) {
+          setCurrentUser(user);
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error('Error loading user:', error);
+      } finally {
+        setIsUserLoading(false);
+        setIsLoading(false);
+      }
+    };
+
+    loadUser();
   }, []);
 
   const handleImageUpload = (newImage) => {
@@ -130,7 +141,7 @@ function App() {
   return (
     <div className="App">
       <Container fluid>
-      <div className="d-flex justify-content-end p-2">
+        <div className="d-flex justify-content-end p-2">
           <Dropdown align="end">
             <Dropdown.Toggle 
               variant="light" 
@@ -138,7 +149,11 @@ function App() {
               className="d-flex align-items-center"
             >
               <i className="bi bi-person-circle me-2"></i>
-              {currentUser?.username}
+              {isUserLoading ? (
+                <span className="ms-2">Loading...</span>
+              ) : (
+                <span className="ms-2">{currentUser?.user?.username}</span>
+              )}
             </Dropdown.Toggle>
 
             <Dropdown.Menu>
