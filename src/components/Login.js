@@ -16,7 +16,7 @@ const Login = ({ onLoginSuccess }) => {
 
     try {
       const response = await AuthService.login(username, password);
-      onLoginSuccess(response);
+      onLoginSuccess(response.user);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to login');
     } finally {

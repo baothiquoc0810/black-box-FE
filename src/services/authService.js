@@ -22,9 +22,9 @@ const AuthService = {
             });
             
             if (response.data.result.token){
-                return saveUserData(response.data.result.user);
+                return saveUserData(response.data.result);
             }
-            return response.data.result.user;
+            return response.data.result;
         } catch (error) {
             throw error;
         }

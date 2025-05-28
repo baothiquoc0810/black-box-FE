@@ -1,27 +1,148 @@
-import React from 'react';
-import { Container, Row, Col, Card, Form, Button } from 'react-bootstrap';
+import React, { useState } from 'react';
+import { Container, Row, Col, Card, Form, Button, Spinner, Alert } from 'react-bootstrap';
 import { XCircle } from 'react-bootstrap-icons';
+import ImageService from '../services/imageService';
 
 const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag }) => {
-  const handleImageUpload = (event) => {
+  const [uploadingImages, setUploadingImages] = useState({});
+  const [uploadError, setUploadError] = useState(null);
+  const [deletingImages, setDeletingImages] = useState({});
+  const [deleteSuccess, setDeleteSuccess] = useState(null);
+  const [previewImages, setPreviewImages] = useState([]); 
+
+  const setErrorWithTimeout = (errorMessage) => {
+    setUploadError(errorMessage);
+    setTimeout(() => {
+      setUploadError(null);
+    }, 3000);
+  };
+
+  const handleImageUpload = async (event) => {
     const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const newImage = {
-          id: Date.now(),
-          src: e.target.result,
-          tags: [],
-          name: file.name
-        };
-        onImageUpload(newImage);
+    if (!file) return;
+
+    setUploadError(null);
+    
+    const previewUrl = URL.createObjectURL(file);
+    const tempId = `temp_${Date.now()}_${Math.random()}`;
+    
+    const previewImage = {
+      id: tempId,
+      src: previewUrl,
+      tags: [],
+      name: file.name,
+      isUploading: true, 
+      isPreview: true 
+    };
+    
+    setPreviewImages(prev => [...prev, previewImage]);
+    setUploadingImages(prev => ({ ...prev, [tempId]: true }));
+    
+    try {
+      const response = await ImageService.uploadImage(file);
+      console.log("response", response);
+      
+      setPreviewImages(prev => prev.filter(img => img.id !== tempId));
+      setUploadingImages(prev => {
+        const newState = { ...prev };
+        delete newState[tempId];
+        return newState;
+      });
+      
+      URL.revokeObjectURL(previewUrl);
+      
+      const uploadedImage = {
+        id: response.id,
+        src: response.pictureUrl,
+        tags: [],
+        name: response.pictureName
       };
-      reader.readAsDataURL(file);
+      
+      onImageUpload(uploadedImage);
+      
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      
+      setPreviewImages(prev => prev.filter(img => img.id !== tempId));
+      setUploadingImages(prev => {
+        const newState = { ...prev };
+        delete newState[tempId];
+        return newState;
+      });
+      
+      URL.revokeObjectURL(previewUrl);
+      
+      let errorMessage = 'Failed to upload image';
+      
+      if (error.response) {
+        errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
+      } else if (error.request) {
+        errorMessage = 'Network error: Please check your connection or CORS settings';
+      }
+      
+      setErrorWithTimeout(errorMessage);
+    }
+    
+    event.target.value = '';
+  };
+
+  const handleDeletePreview = (previewId) => {
+    const previewImage = previewImages.find(img => img.id === previewId);
+    if (previewImage) {
+      URL.revokeObjectURL(previewImage.src);
+    }
+    
+    setPreviewImages(prev => prev.filter(img => img.id !== previewId));
+    setUploadingImages(prev => {
+      const newState = { ...prev };
+      delete newState[previewId];
+      return newState;
+    });
+  };
+
+  const handleDeleteImage = async (imageId) => {
+    try {
+      setDeletingImages(prev => ({ ...prev, [imageId]: true }));
+      setDeleteSuccess(null);
+
+      await ImageService.deleteImage(imageId);
+
+      onDeleteImage(imageId);
+
+      setDeleteSuccess('Image deleted successfully');
+
+      setTimeout(() => {
+        setDeleteSuccess(null);
+      }, 3000);
+
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      setErrorWithTimeout('Failed to delete image. Please try again.');
+    } finally {
+      setDeletingImages(prev => {
+        const newState = { ...prev };
+        delete newState[imageId];
+        return newState;
+      });
     }
   };
 
+  const allImages = [...images, ...previewImages];
+
   return (
     <Container className="mt-4">
+      {uploadError && (
+        <Alert variant="danger" className="mt-2">
+          {uploadError}
+        </Alert>
+      )}
+
+      {deleteSuccess && (
+        <Alert variant="success" className="mt-2">
+          {deleteSuccess}
+        </Alert>
+      )}
+
       <div className="mb-4">
         <Form.Group>
           <Form.Label>Upload Image</Form.Label>
@@ -34,12 +155,26 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
       </div>
 
       <Row xs={1} md={3} lg={4} className="g-4">
-        {images.map((image) => (
+        {allImages.map((image) => (
           <Col key={image.id}>
             <Card className="position-relative">
+              {deletingImages[image.id] && (
+                <div 
+                  className="position-absolute top-50 start-50 translate-middle"
+                  style={{ zIndex: 3 }}
+                >
+                  <Spinner animation="border" variant="danger" />
+                </div>
+              )}
               <div 
                 className="position-absolute top-0 end-0 m-2 cursor-pointer"
-                onClick={() => onDeleteImage(image.id)}
+                onClick={() => {
+                  if (image.isPreview) {
+                    handleDeletePreview(image.id);
+                  } else {
+                    handleDeleteImage(image.id);
+                  }
+                }}
                 style={{ 
                   cursor: 'pointer',
                   zIndex: 2,
@@ -52,7 +187,11 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
               <Card.Img
                 variant="top"
                 src={image.src}
-                style={{ height: '200px', objectFit: 'cover' }}
+                style={{ 
+                  height: '200px', 
+                  objectFit: 'cover',
+                  opacity: deletingImages[image.id] ? 0.5 : 1 
+                }}
               />
               <Card.Body>
                 <Card.Title>{image.name}</Card.Title>
@@ -120,4 +259,4 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
   );
 };
 
-export default ImageGrid; 
+export default ImageGrid;

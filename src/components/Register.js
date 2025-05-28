@@ -45,7 +45,7 @@ const Register = ({ onRegisterSuccess }) => {
         formData.email,
         formData.password
       );
-      onRegisterSuccess(response);
+      onRegisterSuccess(response.user);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to register');
     } finally {
