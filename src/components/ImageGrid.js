@@ -8,7 +8,8 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
   const [uploadError, setUploadError] = useState(null);
   const [deletingImages, setDeletingImages] = useState({});
   const [deleteSuccess, setDeleteSuccess] = useState(null);
-  const [previewImages, setPreviewImages] = useState([]); 
+  const [previewImages, setPreviewImages] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   const setErrorWithTimeout = (errorMessage) => {
     setUploadError(errorMessage);
@@ -22,6 +23,7 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
     if (!file) return;
 
     setUploadError(null);
+    setIsUploading(true);
     
     const previewUrl = URL.createObjectURL(file);
     const tempId = `temp_${Date.now()}_${Math.random()}`;
@@ -40,7 +42,6 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
     
     try {
       const response = await ImageService.uploadImage(file);
-      console.log("response", response);
       
       setPreviewImages(prev => prev.filter(img => img.id !== tempId));
       setUploadingImages(prev => {
@@ -81,9 +82,10 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
       }
       
       setErrorWithTimeout(errorMessage);
+    } finally {
+      setIsUploading(false);
+      event.target.value = '';
     }
-    
-    event.target.value = '';
   };
 
   const handleDeletePreview = (previewId) => {
@@ -146,11 +148,20 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
       <div className="mb-4">
         <Form.Group>
           <Form.Label>Upload Image</Form.Label>
-          <Form.Control
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-          />
+          <div className="d-flex align-items-center">
+            <Form.Control
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              disabled={isUploading}
+            />
+            {/* {isUploading && (
+              <div className="ms-3">
+                <Spinner animation="border" variant="primary" size="sm" />
+                <span className="ms-2">Uploading...</span>
+              </div>
+            )} */}
+          </div>
         </Form.Group>
       </div>
 
@@ -158,6 +169,14 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
         {allImages.map((image) => (
           <Col key={image.id}>
             <Card className="position-relative">
+              {uploadingImages[image.id] && (
+                <div 
+                  className="position-absolute top-50 start-50 translate-middle"
+                  style={{ zIndex: 3 }}
+                >
+                  <Spinner animation="border" variant="primary" />
+                </div>
+              )}
               {deletingImages[image.id] && (
                 <div 
                   className="position-absolute top-50 start-50 translate-middle"
@@ -190,7 +209,7 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
                 style={{ 
                   height: '200px', 
                   objectFit: 'cover',
-                  opacity: deletingImages[image.id] ? 0.5 : 1 
+                  opacity: (uploadingImages[image.id] || deletingImages[image.id]) ? 0.5 : 1 
                 }}
               />
               <Card.Body>
