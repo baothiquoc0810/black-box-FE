@@ -10,7 +10,9 @@ const TagRelationships = ({ images, onAddTagRelation }) => {
   useEffect(() => {
     const tags = new Set();
     images.forEach(image => {
-      image.tags.forEach(tag => tags.add(tag));
+      if (image.tags) {
+        image.tags.forEach(tag => tags.add(tag));
+      }
     });
     setAvailableTags(Array.from(tags));
   }, [images]);

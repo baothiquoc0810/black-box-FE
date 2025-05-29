@@ -2,14 +2,28 @@ export const createNetworkData = (images, tagRelationships) => {
   // Create nodes for images
   const imageNodes = images.map(image => ({
     id: `image_${image.id}`,
-    image: image.src,
-    title: image.name,
+    image: image.pictureUrl,
     shape: 'circularImage',
     size: 30,
     font: {
       size: 12
     },
     group: 'images',
+    title: image.pictureName,
+    borderWidth: 2,
+    borderWidthSelected: 3,
+    color: {
+      border: '#2B7CE9',
+      background: '#ffffff',
+      highlight: {
+        border: '#2B7CE9',
+        background: '#ffffff'
+      },
+      hover: {
+        border: '#2B7CE9',
+        background: '#ffffff'
+      }
+    }
   }));
 
   // Create nodes for tags and edges
@@ -20,10 +34,12 @@ export const createNetworkData = (images, tagRelationships) => {
 
   // Count how many images have each tag
   images.forEach(image => {
-    image.tags.forEach(tag => {
-      tagCount[tag] = (tagCount[tag] || 0) + 1;
-      tagConnections[tag] = 0; // Initialize connection count
-    });
+    if (image.tags) {
+      image.tags.forEach(tag => {
+        tagCount[tag] = (tagCount[tag] || 0) + 1;
+        tagConnections[tag] = 0;
+      });
+    }
   });
 
   // Create tag nodes for tags that appear in multiple images

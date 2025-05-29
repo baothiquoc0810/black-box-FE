@@ -7,6 +7,7 @@ import Register from "./components/Register.js";
 import Login from "./components/Login.js";
 import AuthService from './services/authService';
 import Loading from './components/Loading';
+import UserService from './services/userService';
 
 function App() {
   const [images, setImages] = useState([]);
@@ -25,6 +26,7 @@ function App() {
         if (user) {
           setCurrentUser(user);
           setIsAuthenticated(true);
+          await loadImages(user.user.userId);
         }
       } catch (error) {
         console.error('Error loading user:', error);
@@ -37,16 +39,31 @@ function App() {
     loadUser();
   }, []);
 
+  const loadImages = async (userId) => {
+    try {
+      const fetchedImages = await UserService.getAllImages(userId);
+      setImages(fetchedImages || []);
+    } catch (error) {
+      console.error('Error fetching images:', error);
+      setImages([]);
+    }
+  };
+
   const handleImageUpload = (newImage) => {
     setImages(prev => [...prev, newImage]);
   };
 
   const handleAddTag = (imageId, tag) => {
-    setImages(prev => prev.map(img => 
-      img.id === imageId 
-        ? { ...img, tags: [...img.tags, tag] }
-        : img
-    ));
+    setImages(prev => prev.map(img => {
+      if (img.id === imageId) {
+        const currentTags = img.tags || [];
+        return {
+          ...img,
+          tags: [...currentTags, tag]
+        };
+      }
+      return img;
+    }));
   };
 
   const handleDeleteImage = (imageId) => {

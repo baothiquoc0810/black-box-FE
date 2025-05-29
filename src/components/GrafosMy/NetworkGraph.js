@@ -19,6 +19,7 @@ const NetworkGraph = ({
   const timeoutIdsRef = useRef([]); // Lưu trữ các timeout IDs
   const animationFrameIdRef = useRef(null); // Lưu trữ animation frame ID
   const isMountedRef = useRef(true); // Track component mount status
+  const [isDataReady, setIsDataReady] = useState(false);
   
   const handleNetworkClick = useCallback((params) => {
     if (params.nodes.length > 0) {
@@ -111,7 +112,22 @@ const NetworkGraph = ({
   useEffect(() => {
     isMountedRef.current = true;
     
-    const { nodes, edges } = createNetworkData(images, tagRelationships);
+    // Kiểm tra dữ liệu trước khi tạo network
+    if (!images || images.length === 0) {
+      setIsDataReady(false);
+      return;
+    }
+
+    // Đảm bảo tất cả images đều có pictureUrl
+    const validImages = images.filter(img => img && img.pictureUrl);
+    if (validImages.length === 0) {
+      setIsDataReady(false);
+      return;
+    }
+
+    setIsDataReady(true);
+    
+    const { nodes, edges } = createNetworkData(validImages, tagRelationships);
     nodesRef.current = new DataSet(nodes);
     edgesRef.current = new DataSet(edges);
 
@@ -121,13 +137,16 @@ const NetworkGraph = ({
     };
 
     const options = createNetworkOptions();
-    networkRef.current = new Network(containerRef.current, data, options);
-
-    networkRef.current.on('click', handleNetworkClick);
     
-    networkRef.current.once('stabilized', () => {
-      attemptCenterWithRetry();
-    });
+    // Chỉ tạo network khi container đã sẵn sàng
+    if (containerRef.current) {
+      networkRef.current = new Network(containerRef.current, data, options);
+      networkRef.current.on('click', handleNetworkClick);
+      
+      networkRef.current.once('stabilized', () => {
+        attemptCenterWithRetry();
+      });
+    }
     
     // Cleanup function
     return () => {
@@ -174,6 +193,20 @@ const NetworkGraph = ({
 
   return (
     <div style={{ position: 'relative', width: '100%', height: 'calc(90vh - 135px)' }}>
+      {!isDataReady && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          textAlign: 'center'
+        }}>
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-2">Loading network graph...</p>
+        </div>
+      )}
       <div 
         ref={containerRef} 
         id="mynetwork" 
@@ -183,7 +216,8 @@ const NetworkGraph = ({
           border: '1px solid #e9ecef',
           background: '#ffffff',
           boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)',
-          borderRadius: '0px 0px 5px 5px'
+          borderRadius: '0px 0px 5px 5px',
+          visibility: isDataReady ? 'visible' : 'hidden'
         }}
       />
     </div>

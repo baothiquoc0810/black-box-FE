@@ -1,42 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Spinner, Alert } from 'react-bootstrap';
 import { XCircle } from 'react-bootstrap-icons';
 import ImageService from '../services/imageService';
-import UserService from '../services/userService';
-import AuthService from '../services/authService';
 
-const ImageGrid = ({ onImageUpload, onAddTag, onDeleteImage, onDeleteTag }) => {
-  // Thêm state để lưu trữ images
-  const [images, setImages] = useState([]);
+const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag }) => {
   const [uploadingImages, setUploadingImages] = useState({});
   const [uploadError, setUploadError] = useState(null);
   const [deletingImages, setDeletingImages] = useState({});
   const [deleteSuccess, setDeleteSuccess] = useState(null);
   const [previewImages, setPreviewImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [isLoadingImages, setIsLoadingImages] = useState(true); 
-  
-  const currentUser = AuthService.getCurrentUser();
-
-  useEffect(() => {
-    handleGetAllImages();
-  }, []);
-
-  const handleGetAllImages = async () => {
-    try {
-      setIsLoadingImages(true);
-      const fetchedImages = await UserService.getAllImages(currentUser.user.userId);
-      console.log("images", fetchedImages);
-      
-      // Set images vào state
-      setImages(fetchedImages || []);
-    } catch (error) {
-      console.error('Error fetching images:', error);
-      setImages([]);
-    } finally {
-      setIsLoadingImages(false);
-    }
-  };
 
   const setErrorWithTimeout = (errorMessage) => {
     setUploadError(errorMessage);
@@ -57,9 +30,9 @@ const ImageGrid = ({ onImageUpload, onAddTag, onDeleteImage, onDeleteTag }) => {
     
     const previewImage = {
       id: tempId,
-      src: previewUrl,
+      pictureUrl: previewUrl,
       tags: [],
-      name: file.name,
+      pictureName: file.name,
       isUploading: true, 
       isPreview: true 
     };
@@ -81,18 +54,13 @@ const ImageGrid = ({ onImageUpload, onAddTag, onDeleteImage, onDeleteTag }) => {
       
       const uploadedImage = {
         id: response.id,
-        src: response.pictureUrl,
+        pictureUrl: response.pictureUrl,
         tags: [],
-        name: response.pictureName
+        pictureName: response.pictureName
       };
       
-      // Thêm ảnh mới vào state images
-      setImages(prev => [...prev, uploadedImage]);
-      
-      // Gọi callback nếu có
-      if (onImageUpload) {
-        onImageUpload(uploadedImage);
-      }
+      // Gọi callback để cập nhật state trong App.js
+      onImageUpload(uploadedImage);
       
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -124,7 +92,7 @@ const ImageGrid = ({ onImageUpload, onAddTag, onDeleteImage, onDeleteTag }) => {
   const handleDeletePreview = (previewId) => {
     const previewImage = previewImages.find(img => img.id === previewId);
     if (previewImage) {
-      URL.revokeObjectURL(previewImage.src);
+      URL.revokeObjectURL(previewImage.pictureUrl);
     }
     
     setPreviewImages(prev => prev.filter(img => img.id !== previewId));
@@ -141,9 +109,6 @@ const ImageGrid = ({ onImageUpload, onAddTag, onDeleteImage, onDeleteTag }) => {
       setDeleteSuccess(null);
 
       await ImageService.deleteImage(imageId);
-
-      // Xóa ảnh khỏi state images
-      setImages(prev => prev.filter(img => img.id !== imageId));
 
       // Gọi callback nếu có
       if (onDeleteImage) {
@@ -171,13 +136,6 @@ const ImageGrid = ({ onImageUpload, onAddTag, onDeleteImage, onDeleteTag }) => {
   // Hàm để thêm tag
   const handleAddTag = async (imageId, tag) => {
     try {
-      // Cập nhật state local trước
-      setImages(prev => prev.map(img => 
-        img.id === imageId 
-          ? { ...img, tags: [...(img.tags || []), tag] }
-          : img
-      ));
-
       // Gọi callback nếu có
       if (onAddTag) {
         onAddTag(imageId, tag);
@@ -190,13 +148,6 @@ const ImageGrid = ({ onImageUpload, onAddTag, onDeleteImage, onDeleteTag }) => {
   // Hàm để xóa tag
   const handleDeleteTag = async (imageId, tagToDelete) => {
     try {
-      // Cập nhật state local trước
-      setImages(prev => prev.map(img => 
-        img.id === imageId 
-          ? { ...img, tags: (img.tags || []).filter(tag => tag !== tagToDelete) }
-          : img
-      ));
-
       // Gọi callback nếu có
       if (onDeleteTag) {
         onDeleteTag(imageId, tagToDelete);
@@ -207,16 +158,6 @@ const ImageGrid = ({ onImageUpload, onAddTag, onDeleteImage, onDeleteTag }) => {
   };
 
   const allImages = [...images, ...previewImages];
-
-  // Hiển thị loading khi đang tải images
-  if (isLoadingImages) {
-    return (
-      <Container className="mt-4 text-center">
-        <Spinner animation="border" variant="primary" />
-        <p className="mt-2">Loading images...</p>
-      </Container>
-    );
-  }
 
   return (
     <Container className="mt-4">
