@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { REGISTER_API_URL, LOGIN_API_URL } from '../constants/apiUrls';
+import { REGISTER_API_URL, LOGIN_API_URL, VERIFY_USER_API_URL } from '../constants/apiUrls';
 
 const TOKEN_EXPIRATION_TIME = 1000 * 60 * 60 * 24; // 24 hours
 
@@ -20,9 +20,9 @@ const AuthService = {
                 username,
                 password
             });
-            
-            if (response.data.result.token){
-                return saveUserData(response.data.result);
+
+            if (response.data.result.user.token) {
+                return saveUserData(response.data.result.user);
             }
             return response.data.result;
         } catch (error) {
@@ -36,10 +36,10 @@ const AuthService = {
 
     getCurrentUser: () => {
         const user = JSON.parse(localStorage.getItem('user'));
-        if(!user) return null;
+        if (!user) return null;
 
         const currentTime = Date.now();
-        if(currentTime > user.tokenExpiration){
+        if (currentTime > user.tokenExpiration) {
             localStorage.removeItem('user');
             return null;
         }
@@ -58,10 +58,19 @@ const AuthService = {
                 email,
                 password
             });
-            
-            if(response.data.result.token) {
-                return AuthService._saveUserData(response.data.result);
+
+            if (response.data.result.token) {
+                return saveUserData(response.data.result);
             }
+            return response.data.result;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    verifyUser: async (userId) => {
+        try {
+            const response = await axios.post(`${VERIFY_USER_API_URL}/${userId}`);
             return response.data.result;
         } catch (error) {
             throw error;

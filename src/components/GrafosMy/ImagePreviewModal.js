@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal } from 'react-bootstrap';
+import { getTagName } from '../../utils/commonHelper';
 
 const ImagePreviewModal = ({ show, onHide, image }) => {
   return (
@@ -10,18 +11,21 @@ const ImagePreviewModal = ({ show, onHide, image }) => {
       <Modal.Body>
         {image && (
           <div>
-            <img 
-              src={image.src} 
+            <img
+              src={image.src}
               alt={image.name}
               style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain' }}
             />
             <div className="mt-3">
               <h6>Tags:</h6>
-              {image.tags.map((tag, index) => (
-                <span key={index} className="badge bg-primary me-1">
-                  {tag}
-                </span>
-              ))}
+              {image.tags.map((tag, index) => {
+                const tagName = getTagName(tag);
+                return (
+                  <span key={index} className="badge bg-primary me-1">
+                    {tagName}
+                  </span>
+                );
+              })}
             </div>
           </div>
         )}

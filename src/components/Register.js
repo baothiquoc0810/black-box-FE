@@ -45,7 +45,7 @@ const Register = ({ onRegisterSuccess }) => {
         formData.email,
         formData.password
       );
-      onRegisterSuccess(response.user);
+      onRegisterSuccess(response);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to register');
     } finally {
@@ -103,9 +103,9 @@ const Register = ({ onRegisterSuccess }) => {
             />
           </Form.Group>
 
-          <Button 
-            variant="primary" 
-            type="submit" 
+          <Button
+            variant="primary"
+            type="submit"
             className="w-100"
             disabled={loading}
           >

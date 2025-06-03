@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Spinner, Alert } from 'react-bootstrap';
 import { XCircle } from 'react-bootstrap-icons';
 import ImageService from '../services/imageService';
+import { getTagName } from '../utils/commonHelper';
 
 const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag }) => {
   const [uploadingImages, setUploadingImages] = useState({});
@@ -24,64 +25,63 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
 
     setUploadError(null);
     setIsUploading(true);
-    
+
     const previewUrl = URL.createObjectURL(file);
     const tempId = `temp_${Date.now()}_${Math.random()}`;
-    
+
     const previewImage = {
       id: tempId,
       pictureUrl: previewUrl,
       tags: [],
       pictureName: file.name,
-      isUploading: true, 
-      isPreview: true 
+      isUploading: true,
+      isPreview: true
     };
-    
+
     setPreviewImages(prev => [...prev, previewImage]);
     setUploadingImages(prev => ({ ...prev, [tempId]: true }));
-    
+
     try {
       const response = await ImageService.uploadImage(file);
-      
+
       setPreviewImages(prev => prev.filter(img => img.id !== tempId));
       setUploadingImages(prev => {
         const newState = { ...prev };
         delete newState[tempId];
         return newState;
       });
-      
+
       URL.revokeObjectURL(previewUrl);
-      
+
       const uploadedImage = {
         id: response.id,
         pictureUrl: response.pictureUrl,
         tags: [],
         pictureName: response.pictureName
       };
-      
-      // Gọi callback để cập nhật state trong App.js
+
       onImageUpload(uploadedImage);
-      
+
     } catch (error) {
       console.error('Error uploading image:', error);
-      
+
       setPreviewImages(prev => prev.filter(img => img.id !== tempId));
       setUploadingImages(prev => {
         const newState = { ...prev };
         delete newState[tempId];
         return newState;
       });
-      
+
       URL.revokeObjectURL(previewUrl);
-      
+
       let errorMessage = 'Failed to upload image';
-      
+
       if (error.response) {
         errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
       } else if (error.request) {
         errorMessage = 'Network error: Please check your connection or CORS settings';
       }
-      
+
       setErrorWithTimeout(errorMessage);
     } finally {
       setIsUploading(false);
@@ -94,7 +94,7 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
     if (previewImage) {
       URL.revokeObjectURL(previewImage.pictureUrl);
     }
-    
+
     setPreviewImages(prev => prev.filter(img => img.id !== previewId));
     setUploadingImages(prev => {
       const newState = { ...prev };
@@ -110,7 +110,6 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
 
       await ImageService.deleteImage(imageId);
 
-      // Gọi callback nếu có
       if (onDeleteImage) {
         onDeleteImage(imageId);
       }
@@ -133,27 +132,21 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
     }
   };
 
-  // Hàm để thêm tag
   const handleAddTag = async (imageId, tag) => {
     try {
-      // Gọi callback nếu có
-      if (onAddTag) {
-        onAddTag(imageId, tag);
-      }
+      await onAddTag(imageId, tag);
     } catch (error) {
       console.error('Error adding tag:', error);
+      setErrorWithTimeout('Failed to add tag. Please try again.');
     }
   };
 
-  // Hàm để xóa tag
   const handleDeleteTag = async (imageId, tagToDelete) => {
     try {
-      // Gọi callback nếu có
-      if (onDeleteTag) {
-        onDeleteTag(imageId, tagToDelete);
-      }
+      await onDeleteTag(imageId, tagToDelete);
     } catch (error) {
       console.error('Error deleting tag:', error);
+      setErrorWithTimeout('Failed to delete tag. Please try again.');
     }
   };
 
@@ -197,7 +190,7 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
             <Col key={image.id}>
               <Card className="position-relative">
                 {uploadingImages[image.id] && (
-                  <div 
+                  <div
                     className="position-absolute top-50 start-50 translate-middle"
                     style={{ zIndex: 3 }}
                   >
@@ -205,14 +198,14 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
                   </div>
                 )}
                 {deletingImages[image.id] && (
-                  <div 
+                  <div
                     className="position-absolute top-50 start-50 translate-middle"
                     style={{ zIndex: 3 }}
                   >
                     <Spinner animation="border" variant="danger" />
                   </div>
                 )}
-                <div 
+                <div
                   className="position-absolute top-0 end-0 m-2 cursor-pointer"
                   onClick={() => {
                     if (image.isPreview) {
@@ -221,7 +214,7 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
                       handleDeleteImage(image.id);
                     }
                   }}
-                  style={{ 
+                  style={{
                     cursor: 'pointer',
                     zIndex: 2,
                     backgroundColor: 'rgba(255, 255, 255, 0.8)',
@@ -233,38 +226,43 @@ const ImageGrid = ({ images, onImageUpload, onAddTag, onDeleteImage, onDeleteTag
                 <Card.Img
                   variant="top"
                   src={image.pictureUrl}
-                  style={{ 
-                    height: '200px', 
+                  style={{
+                    height: '200px',
                     objectFit: 'cover',
-                    opacity: (uploadingImages[image.id] || deletingImages[image.id]) ? 0.5 : 1 
+                    opacity: (uploadingImages[image.id] || deletingImages[image.id]) ? 0.5 : 1
                   }}
                 />
                 <Card.Body>
                   <Card.Title>{image.pictureName}</Card.Title>
                   <div className="mb-2">
-                    {(image.tags || []).map((tag, index) => (
-                      <span
-                        key={index}
-                        className="badge bg-primary me-1 position-relative"
-                        style={{ paddingRight: '20px' }}
-                      >
-                        {tag}
-                        <XCircle
-                          size={12}
-                          className="position-absolute"
-                          style={{
-                            right: '5px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            cursor: 'pointer'
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteTag(image.id, tag);
-                          }}
-                        />
-                      </span>
-                    ))}
+                    {(image.tags || []).map((tag, index) => {
+                      const tagName = getTagName(tag);
+                      if (!tagName) return null;
+
+                      return (
+                        <span
+                          key={index}
+                          className="badge bg-primary me-1 position-relative"
+                          style={{ paddingRight: '20px' }}
+                        >
+                          {tagName}
+                          <XCircle
+                            size={12}
+                            className="position-absolute"
+                            style={{
+                              right: '5px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              cursor: 'pointer'
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteTag(image.id, tagName);
+                            }}
+                          />
+                        </span>
+                      );
+                    })}
                   </div>
                   <Form.Group className="d-flex">
                     <Form.Control

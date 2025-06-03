@@ -20,7 +20,7 @@ const NetworkGraph = ({
   const animationFrameIdRef = useRef(null); // Lưu trữ animation frame ID
   const isMountedRef = useRef(true); // Track component mount status
   const [isDataReady, setIsDataReady] = useState(false);
-  
+
   const handleNetworkClick = useCallback((params) => {
     if (params.nodes.length > 0) {
       const nodeId = params.nodes[0];
@@ -50,9 +50,9 @@ const NetworkGraph = ({
     if (!isMountedRef.current || !networkRef.current) {
       return false;
     }
-    
+
     centerAttemptCountRef.current += 1;
-    
+
     try {
       // Cancel previous animation frame if exists
       if (animationFrameIdRef.current) {
@@ -73,7 +73,7 @@ const NetworkGraph = ({
         }
         animationFrameIdRef.current = null;
       });
-      
+
       return true;
     } catch (error) {
       console.error("Error centering network:", error);
@@ -83,19 +83,19 @@ const NetworkGraph = ({
 
   const attemptCenterWithRetry = useCallback(() => {
     if (!isMountedRef.current) return;
-    
+
     centerAttemptCountRef.current = 0;
-    
+
     // Clear existing timeouts
     timeoutIdsRef.current.forEach(id => clearTimeout(id));
     timeoutIdsRef.current = [];
-    
+
     const initialTimeoutId = setTimeout(() => {
       if (!isMountedRef.current) return;
       centerNetwork();
-      
+
       const retryDelays = [300, 700, 1500, 3000];
-      
+
       retryDelays.forEach((delay, index) => {
         const timeoutId = setTimeout(() => {
           if (isMountedRef.current && centerAttemptCountRef.current < maxCenterAttempts) {
@@ -105,13 +105,13 @@ const NetworkGraph = ({
         timeoutIdsRef.current.push(timeoutId);
       });
     }, 50);
-    
+
     timeoutIdsRef.current.push(initialTimeoutId);
   }, [centerNetwork]);
 
   useEffect(() => {
     isMountedRef.current = true;
-    
+
     // Kiểm tra dữ liệu trước khi tạo network
     if (!images || images.length === 0) {
       setIsDataReady(false);
@@ -126,7 +126,7 @@ const NetworkGraph = ({
     }
 
     setIsDataReady(true);
-    
+
     const { nodes, edges } = createNetworkData(validImages, tagRelationships);
     nodesRef.current = new DataSet(nodes);
     edgesRef.current = new DataSet(edges);
@@ -137,31 +137,31 @@ const NetworkGraph = ({
     };
 
     const options = createNetworkOptions();
-    
+
     // Chỉ tạo network khi container đã sẵn sàng
     if (containerRef.current) {
       networkRef.current = new Network(containerRef.current, data, options);
       networkRef.current.on('click', handleNetworkClick);
-      
+
       networkRef.current.once('stabilized', () => {
         attemptCenterWithRetry();
       });
     }
-    
+
     // Cleanup function
     return () => {
       isMountedRef.current = false;
-      
+
       // Clear all timeouts
       timeoutIdsRef.current.forEach(id => clearTimeout(id));
       timeoutIdsRef.current = [];
-      
+
       // Cancel animation frame
       if (animationFrameIdRef.current) {
         cancelAnimationFrame(animationFrameIdRef.current);
         animationFrameIdRef.current = null;
       }
-      
+
       // Destroy network
       if (networkRef.current) {
         try {
@@ -173,13 +173,13 @@ const NetworkGraph = ({
       }
     };
   }, [
-    images, 
-    tagRelationships, 
-    containerRef, 
-    edgesRef, 
-    handleNetworkClick, 
-    networkRef, 
-    nodesRef, 
+    images,
+    tagRelationships,
+    containerRef,
+    edgesRef,
+    handleNetworkClick,
+    networkRef,
+    nodesRef,
     centerNetwork,
     attemptCenterWithRetry
   ]);
@@ -193,7 +193,17 @@ const NetworkGraph = ({
 
   return (
     <div style={{ position: 'relative', width: '100%', height: 'calc(90vh - 135px)' }}>
-      {!isDataReady && (
+      {!images || images.length === 0 ? (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          textAlign: 'center'
+        }}>
+          <p className="text-muted">No images available. Please upload some images first.</p>
+        </div>
+      ) : !isDataReady ? (
         <div style={{
           position: 'absolute',
           top: '50%',
@@ -206,20 +216,20 @@ const NetworkGraph = ({
           </div>
           <p className="mt-2">Loading network graph...</p>
         </div>
+      ) : (
+        <div
+          ref={containerRef}
+          id="mynetwork"
+          style={{
+            width: '100%',
+            height: '100%',
+            border: '1px solid #e9ecef',
+            background: '#ffffff',
+            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)',
+            borderRadius: '0px 0px 5px 5px'
+          }}
+        />
       )}
-      <div 
-        ref={containerRef} 
-        id="mynetwork" 
-        style={{ 
-          width: '100%', 
-          height: '100%',
-          border: '1px solid #e9ecef',
-          background: '#ffffff',
-          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)',
-          borderRadius: '0px 0px 5px 5px',
-          visibility: isDataReady ? 'visible' : 'hidden'
-        }}
-      />
     </div>
   );
 };
