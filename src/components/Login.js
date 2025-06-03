@@ -16,7 +16,7 @@ const Login = ({ onLoginSuccess }) => {
 
     try {
       const response = await AuthService.login(username, password);
-      onLoginSuccess(response.user);
+      onLoginSuccess(response);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to login');
     } finally {
@@ -50,9 +50,9 @@ const Login = ({ onLoginSuccess }) => {
             />
           </Form.Group>
 
-          <Button 
-            variant="primary" 
-            type="submit" 
+          <Button
+            variant="primary"
+            type="submit"
             className="w-100"
             disabled={loading}
           >

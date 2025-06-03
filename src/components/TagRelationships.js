@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Button, ListGroup } from 'react-bootstrap';
+import { Form, Button } from 'react-bootstrap';
+import { getTagName } from '../utils/commonHelper';
 
 const TagRelationships = ({ images, onAddTagRelation }) => {
   const [availableTags, setAvailableTags] = useState([]);
@@ -11,7 +12,10 @@ const TagRelationships = ({ images, onAddTagRelation }) => {
     const tags = new Set();
     images.forEach(image => {
       if (image.tags) {
-        image.tags.forEach(tag => tags.add(tag));
+        image.tags.forEach(tag => {
+          const tagName = getTagName(tag);
+          if (tagName) tags.add(tagName);
+        });
       }
     });
     setAvailableTags(Array.from(tags));
@@ -28,7 +32,7 @@ const TagRelationships = ({ images, onAddTagRelation }) => {
 
   return (
     <div className="mb-4 p-3 border rounded bg-light" style={{ width: '20%', marginRight: '20px' }}>
-      <h5 style={{borderBottom: '1px solid #e9ecef', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>Link Tags</h5>
+      <h5 style={{ borderBottom: '1px solid #e9ecef', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Link Tags</h5>
       <Form onSubmit={handleSubmit}>
         <div className="d-flex gap-3 align-items-center flex-column">
           <Form.Group className="mb-0 flex-grow-1 w-100">
@@ -55,11 +59,11 @@ const TagRelationships = ({ images, onAddTagRelation }) => {
                 .filter(tag => tag !== selectedParentTag)
                 .map(tag => (
                   <option key={`child-${tag}`} value={tag}>{tag}</option>
-              ))}
+                ))}
             </Form.Select>
           </Form.Group>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             variant="primary"
             disabled={!selectedParentTag || !selectedChildTag}
           >

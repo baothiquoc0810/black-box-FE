@@ -8,6 +8,7 @@ import Login from "./components/Login.js";
 import AuthService from './services/authService';
 import Loading from './components/Loading';
 import UserService from './services/userService';
+import TagService from './services/tagService';
 
 function App() {
   const [images, setImages] = useState([]);
@@ -18,31 +19,68 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
 
-  useEffect(() => {
-    const loadUser = async () => {
-      setIsUserLoading(true);
+
+  const loadUser = async () => {
+    setIsUserLoading(true);
+    try {
+      const user = AuthService.getCurrentUser();
       try {
-        const user = AuthService.getCurrentUser();
-        if (user) {
+        const response = await AuthService.verifyUser(user.userId);
+        if (response) {
           setCurrentUser(user);
           setIsAuthenticated(true);
-          await loadImages(user.user.userId);
+          await loadImages(user.userId);
+        } else {
+          setIsAuthenticated(false);
+          AuthService.logout();
+          setCurrentUser(null);
+          setShowLogin(true);
         }
       } catch (error) {
-        console.error('Error loading user:', error);
-      } finally {
-        setIsUserLoading(false);
-        setIsLoading(false);
+        console.error('Error verifying user:', error);
+        AuthService.logout();
+        setCurrentUser(null);
+        setIsAuthenticated(false);
       }
-    };
+    } catch (error) {
+      console.error('Error loading user:', error);
+      // Nếu có lỗi khi load user, đăng xuất
+      AuthService.logout();
+      setCurrentUser(null);
+      setIsAuthenticated(false);
+    } finally {
+      setIsUserLoading(false);
+      setIsLoading(false);
 
+    }
+  };
+
+  useEffect(() => {
     loadUser();
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadUser();
+    }
+  }, [isAuthenticated]);
 
   const loadImages = async (userId) => {
     try {
       const fetchedImages = await UserService.getAllImages(userId);
-      setImages(fetchedImages || []);
+      const imagesWithTags = await Promise.all(
+        fetchedImages.map(async (picture) => {
+          try {
+            const tags = await TagService.getAllTags(picture.id);
+            const processedTags = Array.isArray(tags) ? tags : [];
+            return { ...picture, tags: processedTags };
+          } catch (error) {
+            console.error(`Error loading tags for image ${picture.id}:`, error);
+            return { ...picture, tags: [] };
+          }
+        })
+      );
+      setImages(imagesWithTags || []);
     } catch (error) {
       console.error('Error fetching images:', error);
       setImages([]);
@@ -53,29 +91,42 @@ function App() {
     setImages(prev => [...prev, newImage]);
   };
 
-  const handleAddTag = (imageId, tag) => {
-    setImages(prev => prev.map(img => {
-      if (img.id === imageId) {
-        const currentTags = img.tags || [];
-        return {
-          ...img,
-          tags: [...currentTags, tag]
-        };
-      }
-      return img;
-    }));
+  const loadTagsForImage = async (imageId) => {
+    try {
+      const tags = await TagService.getAllTags(imageId);
+      const processedTags = Array.isArray(tags) ? tags : [];
+
+      setImages(prev => prev.map(img =>
+        img.id === imageId
+          ? { ...img, tags: processedTags }
+          : img
+      ));
+    } catch (error) {
+      console.error('Error loading tags:', error);
+    }
+  };
+
+  const handleAddTag = async (imageId, tag) => {
+    try {
+      console.log("Adding tag:", tag);
+      await TagService.insertTag(imageId, tag);
+      await loadTagsForImage(imageId);
+    } catch (error) {
+      console.error('Error adding tag:', error);
+    }
   };
 
   const handleDeleteImage = (imageId) => {
     setImages(prev => prev.filter(img => img.id !== imageId));
   };
 
-  const handleDeleteTag = (imageId, tagToDelete) => {
-    setImages(prev => prev.map(img => 
-      img.id === imageId 
-        ? { ...img, tags: img.tags.filter(tag => tag !== tagToDelete) }
-        : img
-    ));
+  const handleDeleteTag = async (imageId, tagToDelete) => {
+    try {
+      await TagService.deleteTag(imageId, tagToDelete);
+      await loadTagsForImage(imageId);
+    } catch (error) {
+      console.error('Error deleting tag:', error);
+    }
   };
 
   const handleAddTagRelation = (parentTag, childTag) => {
@@ -92,19 +143,55 @@ function App() {
   };
 
   const handleDeleteTagRelation = (parentTag, childTag) => {
-    setTagRelationships(prev => 
+    setTagRelationships(prev =>
       prev.filter(rel => !(rel.parent === parentTag && rel.child === childTag))
     );
   };
 
-  const handleRegisterSuccess = (response) => {
-    setCurrentUser(response);
-    setIsAuthenticated(true);
+  const handleRegisterSuccess = async (response) => {
+    try {
+      // Verify user ngay sau khi đăng ký thành công
+      const verifyResponse = await AuthService.verifyUser(response.userId);
+      if (verifyResponse) {
+        setCurrentUser(response);
+        setIsAuthenticated(true);
+      } else {
+        // Nếu verify thất bại
+        AuthService.logout();
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+        setShowLogin(true);
+      }
+    } catch (error) {
+      console.error('Error verifying user after register:', error);
+      AuthService.logout();
+      setCurrentUser(null);
+      setIsAuthenticated(false);
+      setShowLogin(true);
+    }
   };
 
-  const handleLoginSuccess = (response) => {
-    setCurrentUser(response);
-    setIsAuthenticated(true);
+  const handleLoginSuccess = async (response) => {
+    try {
+      // Verify user ngay sau khi đăng nhập thành công
+      const verifyResponse = await AuthService.verifyUser(response.userId);
+      if (verifyResponse) {
+        setCurrentUser(response);
+        setIsAuthenticated(true);
+      } else {
+        // Nếu verify thất bại
+        AuthService.logout();
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+        setShowLogin(true);
+      }
+    } catch (error) {
+      console.error('Error verifying user after login:', error);
+      AuthService.logout();
+      setCurrentUser(null);
+      setIsAuthenticated(false);
+      setShowLogin(true);
+    }
   };
 
   const handleLogout = () => {
@@ -126,8 +213,8 @@ function App() {
             <div className="text-center mt-3">
               <p>
                 Chưa có tài khoản?{' '}
-                <Button 
-                  variant="link" 
+                <Button
+                  variant="link"
                   onClick={() => setShowLogin(false)}
                 >
                   Đăng ký ngay
@@ -141,8 +228,8 @@ function App() {
             <div className="text-center mt-3">
               <p>
                 Đã có tài khoản?{' '}
-                <Button 
-                  variant="link" 
+                <Button
+                  variant="link"
                   onClick={() => setShowLogin(true)}
                 >
                   Đăng nhập
@@ -160,8 +247,8 @@ function App() {
       <Container fluid>
         <div className="d-flex justify-content-end p-2">
           <Dropdown align="end">
-            <Dropdown.Toggle 
-              variant="light" 
+            <Dropdown.Toggle
+              variant="light"
               id="dropdown-profile"
               className="d-flex align-items-center"
             >
@@ -169,7 +256,7 @@ function App() {
               {isUserLoading ? (
                 <span className="ms-2">Loading...</span>
               ) : (
-                <span className="ms-2">{currentUser?.user?.username}</span>
+                <span className="ms-2">{currentUser?.username}</span>
               )}
             </Dropdown.Toggle>
 
@@ -193,7 +280,7 @@ function App() {
 
         <Tabs defaultActiveKey="grid" className="mb-3">
           <Tab eventKey="grid" title="Grid View">
-            <ImageGrid 
+            <ImageGrid
               images={images}
               onImageUpload={handleImageUpload}
               onAddTag={handleAddTag}
@@ -202,18 +289,18 @@ function App() {
             />
           </Tab>
           <Tab eventKey="network" title="Network View">
-            <div className="d-flex" style={{ height: 'calc(100vh - 120px)'}}>
-            <TagRelationships 
-              images={images} 
-              onAddTagRelation={handleAddTagRelation}
-            />
-            <GrafosMy 
-              images={images}
-              tagRelationships={tagRelationships}
-              onDeleteTagRelation={handleDeleteTagRelation}
-              onDeleteImage={handleDeleteImage}
-              onDeleteTag={handleDeleteTag}
-            />
+            <div className="d-flex" style={{ height: 'calc(100vh - 120px)' }}>
+              <TagRelationships
+                images={images}
+                onAddTagRelation={handleAddTagRelation}
+              />
+              <GrafosMy
+                images={images}
+                tagRelationships={tagRelationships}
+                onDeleteTagRelation={handleDeleteTagRelation}
+                onDeleteImage={handleDeleteImage}
+                onDeleteTag={handleDeleteTag}
+              />
             </div>
           </Tab>
         </Tabs>

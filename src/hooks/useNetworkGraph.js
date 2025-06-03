@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { DataSet } from 'vis-data';
 import { createNetworkData } from '../utils/networkHelpers';
+import { getTagName } from '../utils/commonHelper';
 
 const useNetworkGraph = ({
   images,
@@ -34,7 +35,7 @@ const useNetworkGraph = ({
 
     // Lấy thông tin đầy đủ của các edge từ edgesRef
     const edgesToDelete = selectedEdgeIds.map(edgeId => edgesRef.current.get(edgeId)).filter(Boolean);
-    
+
     // Xóa tất cả các edge
     edgesRef.current.remove(selectedEdgeIds);
 
@@ -55,9 +56,12 @@ const useNetworkGraph = ({
         if (remainingEdges.length === 0) {
           const tagToRemove = nodeId.replace('tag_', '');
           nodesRef.current.remove(nodeId);
-          
+
           images.forEach(image => {
-            if (image.tags.includes(tagToRemove)) {
+            if (image.tags.some(tag => {
+              const tagName = getTagName(tag);
+              return tagName === tagToRemove;
+            })) {
               onDeleteTag(image.id, tagToRemove);
             }
           });
@@ -79,7 +83,7 @@ const useNetworkGraph = ({
       if (edge.arrows === '' || (edge.arrows && !edge.arrows.to)) {
         const tagNode = edge.from.startsWith('tag_') ? edge.from : edge.to;
         const imageNode = edge.from.startsWith('image_') ? edge.from : edge.to;
-        
+
         if (tagNode && imageNode) {
           const tagName = tagNode.replace('tag_', '');
           const imageId = parseInt(imageNode.replace('image_', ''));
