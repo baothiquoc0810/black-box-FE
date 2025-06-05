@@ -22,7 +22,7 @@ const TagService = {
 
     deleteTag: async (pictureId, name) => {
         try {
-            const response = await axios.delete(`${DELETE_TAG_API_URL}`, { pictureId, name });
+            const response = await axios.post(`${DELETE_TAG_API_URL}`, { pictureId, name });
             return response.data.result;
         } catch (error) {
             throw error;

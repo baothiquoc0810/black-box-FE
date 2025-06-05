@@ -108,9 +108,18 @@ function App() {
 
   const handleAddTag = async (imageId, tag) => {
     try {
-      console.log("Adding tag:", tag);
       await TagService.insertTag(imageId, tag);
-      await loadTagsForImage(imageId);
+      // Sau khi thêm tag thành công, cập nhật lại state images
+      const updatedImages = await Promise.all(
+        images.map(async (img) => {
+          if (img.id === imageId) {
+            const tags = await TagService.getAllTags(imageId);
+            return { ...img, tags: tags || [] };
+          }
+          return img;
+        })
+      );
+      setImages(updatedImages);
     } catch (error) {
       console.error('Error adding tag:', error);
     }
@@ -122,8 +131,11 @@ function App() {
 
   const handleDeleteTag = async (imageId, tagToDelete) => {
     try {
-      await TagService.deleteTag(imageId, tagToDelete);
-      await loadTagsForImage(imageId);
+      // Đợi response từ server
+      const response = await TagService.deleteTag(imageId, tagToDelete);
+      if (response) {
+        await loadTagsForImage(imageId);
+      }
     } catch (error) {
       console.error('Error deleting tag:', error);
     }
