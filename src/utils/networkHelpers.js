@@ -1,3 +1,5 @@
+import { getTagName } from "./commonHelper";
+
 export const createNetworkData = (images, tagRelationships) => {
   // Create nodes for images
   const imageNodes = images.map(image => ({
@@ -36,19 +38,21 @@ export const createNetworkData = (images, tagRelationships) => {
   images.forEach(image => {
     if (image.tags) {
       image.tags.forEach(tag => {
-        tagCount[tag] = (tagCount[tag] || 0) + 1;
-        tagConnections[tag] = 0;
+        // Lấy tag name từ object tag
+        const tagName = typeof tag === 'object' ? tag.name : tag;
+        tagCount[tagName] = (tagCount[tagName] || 0) + 1;
+        tagConnections[tagName] = 0;
       });
     }
   });
 
   // Create tag nodes for tags that appear in multiple images
-  Object.entries(tagCount).forEach(([tag, count]) => {
+  Object.entries(tagCount).forEach(([tagName, count]) => {
     if (count >= 2) {
       tagNodes.push({
-        id: `tag_${tag}`,
-        label: tag,
-        title: tag,
+        id: `tag_${tagName}`,
+        label: tagName,
+        title: tagName,
         shape: 'circle',
         margin: 20,
         color: {
@@ -64,14 +68,22 @@ export const createNetworkData = (images, tagRelationships) => {
 
       // Create edges from tag to images
       images.forEach(image => {
-        if (image.tags.includes(tag)) {
-          edges.push({
-            from: `tag_${tag}`,
-            to: `image_${image.id}`,
-            title: `Tagged as ${tag}`,
-            color: '#0288d1',
+        if (image.tags) {
+          // Kiểm tra xem image có tag này không
+          const hasTag = image.tags.some(tag => {
+            const currentTagName = getTagName(tag);
+            return currentTagName === tagName;
           });
-          tagConnections[tag]++; // Increment connection count
+
+          if (hasTag) {
+            edges.push({
+              from: `tag_${tagName}`,
+              to: `image_${image.id}`,
+              title: `Tagged as ${tagName}`,
+              color: '#0288d1',
+            });
+            tagConnections[tagName]++;
+          }
         }
       });
     }
@@ -80,8 +92,8 @@ export const createNetworkData = (images, tagRelationships) => {
   // Add edges for tag relationships
   if (tagRelationships) {
     tagRelationships.forEach(rel => {
-      if (tagNodes.some(node => node.id === `tag_${rel.parent}`) && 
-          tagNodes.some(node => node.id === `tag_${rel.child}`)) {
+      if (tagNodes.some(node => node.id === `tag_${rel.parent}`) &&
+        tagNodes.some(node => node.id === `tag_${rel.child}`)) {
         edges.push({
           from: `tag_${rel.parent}`,
           to: `tag_${rel.child}`,

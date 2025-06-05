@@ -30,13 +30,46 @@ const useNetworkGraph = ({
 
   }, [images, tagRelationships]);
 
-  const handleDeleteEdges = (selectedEdgeIds) => {
+  const handleDeleteEdges = async (selectedEdgeIds) => {
     if (!selectedEdgeIds || selectedEdgeIds.length === 0) return;
 
     // Lấy thông tin đầy đủ của các edge từ edgesRef
     const edgesToDelete = selectedEdgeIds.map(edgeId => edgesRef.current.get(edgeId)).filter(Boolean);
 
-    // Xóa tất cả các edge
+    // Xử lý tag-to-image relationships trước
+    for (const edge of edgesToDelete) {
+      if (edge.arrows === undefined || (edge.arrows && !edge.arrows.to)) {
+        const tagNode = edge.from.startsWith('tag_') ? edge.from : edge.to;
+        const imageNode = edge.from.startsWith('image_') ? edge.from : edge.to;
+
+        if (tagNode && imageNode) {
+          const tagName = tagNode.replace('tag_', '');
+          const imageId = imageNode.replace('image_', '');
+          try {
+            // Đợi mỗi lần xóa tag hoàn thành trước khi tiếp tục
+            await onDeleteTag(imageId, tagName);
+          } catch (error) {
+            console.error('Error deleting tag:', error);
+            // Có thể thêm xử lý lỗi ở đây nếu cần
+          }
+        }
+      }
+    }
+
+    // Xử lý tag relationships
+    for (const edge of edgesToDelete) {
+      if (edge.arrows === 'to' || (edge.arrows && edge.arrows.to)) {
+        const parentTag = edge.from.replace('tag_', '');
+        const childTag = edge.to.replace('tag_', '');
+        try {
+          await onDeleteTagRelation(parentTag, childTag);
+        } catch (error) {
+          console.error('Error deleting tag relation:', error);
+        }
+      }
+    }
+
+    // Xóa tất cả các edge sau khi đã xử lý xong các tag
     edgesRef.current.remove(selectedEdgeIds);
 
     // Xử lý các node bị cô lập sau khi xóa edges
@@ -47,50 +80,17 @@ const useNetworkGraph = ({
     });
 
     // Kiểm tra các tag nodes bị cô lập
-    affectedNodes.forEach(nodeId => {
+    for (const nodeId of affectedNodes) {
       if (nodeId.startsWith('tag_')) {
         const remainingEdges = edgesRef.current.get({
           filter: edge => edge.from === nodeId || edge.to === nodeId
         });
 
         if (remainingEdges.length === 0) {
-          const tagToRemove = nodeId.replace('tag_', '');
           nodesRef.current.remove(nodeId);
-
-          images.forEach(image => {
-            if (image.tags.some(tag => {
-              const tagName = getTagName(tag);
-              return tagName === tagToRemove;
-            })) {
-              onDeleteTag(image.id, tagToRemove);
-            }
-          });
         }
       }
-    });
-
-    // Xử lý tag relationships
-    edgesToDelete.forEach(edge => {
-      if (edge.arrows === 'to' || (edge.arrows && edge.arrows.to)) {
-        const parentTag = edge.from.replace('tag_', '');
-        const childTag = edge.to.replace('tag_', '');
-        onDeleteTagRelation(parentTag, childTag);
-      }
-    });
-
-    // Xử lý tag-to-image relationships
-    edgesToDelete.forEach(edge => {
-      if (edge.arrows === '' || (edge.arrows && !edge.arrows.to)) {
-        const tagNode = edge.from.startsWith('tag_') ? edge.from : edge.to;
-        const imageNode = edge.from.startsWith('image_') ? edge.from : edge.to;
-
-        if (tagNode && imageNode) {
-          const tagName = tagNode.replace('tag_', '');
-          const imageId = parseInt(imageNode.replace('image_', ''));
-          onDeleteTag(imageId, tagName);
-        }
-      }
-    });
+    }
 
     setSelectedEdges(null);
   };

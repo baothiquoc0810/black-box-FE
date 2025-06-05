@@ -6,14 +6,14 @@ const ImagePreviewModal = ({ show, onHide, image }) => {
   return (
     <Modal show={show} onHide={onHide} size="lg">
       <Modal.Header closeButton>
-        <Modal.Title>{image?.name}</Modal.Title>
+        <Modal.Title>{image?.pictureName}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         {image && (
           <div>
             <img
-              src={image.src}
-              alt={image.name}
+              src={image.pictureUrl}
+              alt={image.pictureName}
               style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain' }}
             />
             <div className="mt-3">

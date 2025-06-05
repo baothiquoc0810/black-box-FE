@@ -15,4 +15,4 @@ export const CLOUDINARY_DELETE_URL = `${API_URL}/cloudinary/delete`;
 //tag
 export const GET_ALL_TAGS_API_URL = `${API_URL}/tag/allTags`;
 export const INSERT_TAG_API_URL = `${API_URL}/tag/insert`;
-export const DELETE_TAG_API_URL = `${API_URL}/tag/deleteTag`;
+export const DELETE_TAG_API_URL = `${API_URL}/tag/delete`;

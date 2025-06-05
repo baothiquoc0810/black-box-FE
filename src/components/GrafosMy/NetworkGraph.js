@@ -25,7 +25,7 @@ const NetworkGraph = ({
     if (params.nodes.length > 0) {
       const nodeId = params.nodes[0];
       if (nodeId.startsWith('image_')) {
-        const imageId = parseInt(nodeId.split('_')[1]);
+        const imageId = nodeId.replace('image_', '');
         const image = images.find(img => img.id === imageId);
         if (image) {
           setSelectedImage(image);
@@ -117,8 +117,7 @@ const NetworkGraph = ({
       setIsDataReady(false);
       return;
     }
-
-    // Đảm bảo tất cả images đều có pictureUrl
+    // Đảm bảo tất cả images đều có pictureUrl và tags
     const validImages = images.filter(img => img && img.pictureUrl);
     if (validImages.length === 0) {
       setIsDataReady(false);
@@ -127,9 +126,19 @@ const NetworkGraph = ({
 
     setIsDataReady(true);
 
+    // Tạo network data mới
     const { nodes, edges } = createNetworkData(validImages, tagRelationships);
-    nodesRef.current = new DataSet(nodes);
-    edgesRef.current = new DataSet(edges);
+
+    // Cập nhật nodes và edges
+    if (nodesRef.current && edgesRef.current) {
+      nodesRef.current.clear();
+      edgesRef.current.clear();
+      nodesRef.current.add(nodes);
+      edgesRef.current.add(edges);
+    } else {
+      nodesRef.current = new DataSet(nodes);
+      edgesRef.current = new DataSet(edges);
+    }
 
     const data = {
       nodes: nodesRef.current,
@@ -140,8 +149,14 @@ const NetworkGraph = ({
 
     // Chỉ tạo network khi container đã sẵn sàng
     if (containerRef.current) {
-      networkRef.current = new Network(containerRef.current, data, options);
-      networkRef.current.on('click', handleNetworkClick);
+      if (networkRef.current) {
+        // Nếu network đã tồn tại, chỉ cập nhật data
+        networkRef.current.setData(data);
+      } else {
+        // Nếu network chưa tồn tại, tạo mới
+        networkRef.current = new Network(containerRef.current, data, options);
+        networkRef.current.on('click', handleNetworkClick);
+      }
 
       networkRef.current.once('stabilized', () => {
         attemptCenterWithRetry();
@@ -172,17 +187,7 @@ const NetworkGraph = ({
         }
       }
     };
-  }, [
-    images,
-    tagRelationships,
-    containerRef,
-    edgesRef,
-    handleNetworkClick,
-    networkRef,
-    nodesRef,
-    centerNetwork,
-    attemptCenterWithRetry
-  ]);
+  }, [images, tagRelationships]);
 
   // Set mounted status to false when component unmounts
   useEffect(() => {
